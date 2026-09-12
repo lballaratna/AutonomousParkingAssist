@@ -2,4 +2,4 @@
 pythonpath = ["."]
 [tool.coverage.run]
 branch = true
-source = ["AutonomousParkingAssist"]
+source = ["autonomous_parking_system"]
