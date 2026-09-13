@@ -1,3 +1,15 @@
+                         **********Python command************
+
+
+==>python -c "PYTHON_CODE"
+(-c means "execute the Python code written inside the quotes.")
+
+eg: python -c "from autonomous_parking_system import ParkingAssistant, FixedSensor; c 
+= ParkingAssistant(FixedSensor(0), FixedSensor(0)); print(c.state)"
+
+                         **********Pytest Commands************
+
+
 *****How to run the files under tests folder*****
 
 ==> pytest tests/test_park.py -v 
