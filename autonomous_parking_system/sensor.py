@@ -7,11 +7,15 @@ class Sensor(ABC):
     def read(self) -> int: ...
 
 class FixedSensor(Sensor):
-    '''always returns the same value-deterministic test cases'''
-    def __init__(self,value: int):
-        self._value=value
+    '''returns values close to the base value (±2) - simulates a clean,
+    stable sensor with realistic minor variation'''
+    def __init__(self, value: int):
+        self._value = value
     def read(self) -> int:
-        return self._value 
+        jittered = self._value + random.randint(-2, 2)
+        if 0 <= self._value <= 200:
+            return max(0, min(200, jittered))
+        return jittered  # out-of-range base: let _is_noisy() catch it
 
 class RandomSensor(Sensor):
     def read(self) -> int:
