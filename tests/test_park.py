@@ -20,6 +20,17 @@ def test_parks_immediately_when_already_at_free_stretch():
     assert car.state.status == "parked"
 
 
+# Park called while already parked => Rejected
+# Park the car once (succeeds), then call park() again and  second call raises an error. 
+def test_park_while_already_parked_is_rejected():
+    car = ParkingAssistant(FixedSensor(0), FixedSensor(0))
+    car.park()
+    with pytest.raises(Exception):
+        car.park()  
+
+        
+
+
 # No stretch right here, but one exists further ahead => car drives
 # forward (reusing move_forward + isEmpty) until it finds one, then parks.
 # Requirement is real for Phase 1 (case 21), but testing it needs a sensor
@@ -50,12 +61,6 @@ def test_no_stretch_found_anywhere_is_rejected():
     pytest.skip("needs sequenced sensor control (pytest-mock) - covered in Phase 2")  # case 24
 
 
-# Park called while already parked => Rejected
-# Park the car once (succeeds), then call park() again and  second call raises an error. 
-def test_park_while_already_parked_is_rejected():
-    car = ParkingAssistant(FixedSensor(0), FixedSensor(0))
-    car.park()
-    with pytest.raises(Exception):
-        car.park()  
+
 
 
