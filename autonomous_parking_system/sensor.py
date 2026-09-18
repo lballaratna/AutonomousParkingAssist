@@ -22,6 +22,17 @@ class NoisySensor(Sensor):
     def read(self) -> int:
         return random.choice([0,200,random.randint(0,200)])
 
+class CountingSensor(Sensor):
+    '''Wraps another sensor and counts how many times read() was called,
+    so a test can prove a call count without a mocking library.'''
+    def __init__(self, wrapped: Sensor):
+        self._wrapped = wrapped
+        self.call_count = 0
+
+    def read(self) -> int:
+        self.call_count += 1
+        return self._wrapped.read()
+
 class SequenceSensor(Sensor):
     '''Returns a pre-set list of values, one block per metre, so a test can
     script a sensor whose reading changes as the car drives forward -

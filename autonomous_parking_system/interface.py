@@ -47,22 +47,27 @@ class ParkingAssistantInterface(ABC):
         Post-condition: returns an int in 0-200 if at least one sensor is
         not noisy; raises an error if both sensors are noisy at the same
         time (not mentioned in the requirement - our own decision).
-        Test-cases: a, b, c, d, e, f, g, and the call-count case (f)
-        (tests/test_is_empty.py) - the call-count case is covered in Phase 2.
+        Test-cases: a, b, c, d, e, f, g, case 20 (the call-count case), and
+        case 21 (RandomSensor stays in range) (tests/test_is_empty.py).
         '''
 
     @abstractmethod
     def park(self) -> CarState:
         '''
-        Description: park at the current position if it's at a free stretch
-        of STRETCH_REQUIRED meters, otherwise drive forward searching for
-        one, then park.
+        Description: find a free stretch of STRETCH_REQUIRED meters - at the
+        current position if it already qualifies, otherwise drive forward
+        searching for one - then reverse into it (a standard parallel
+        parking maneuver) and park.
         Pre-condition: car must not already be parked.
         Post-condition: status becomes "parked" once a qualifying stretch is
-        found; raises an error if park() is called while already parked
-        (not mentioned in the requirement - our own decision, same
-        reasoning as unpark() below).
-        Test-cases: case 20, 21, 22, 23, 24, 25 (tests/test_park.py).
+        found, with the car positioned at the start of that stretch (having
+        driven to its end, then reversed back in); raises an error if
+        park() is called while already parked (not mentioned in the
+        requirement - our own decision, same reasoning as unpark() below).
+        Test-cases: case 22, 23, 24, 25, 26, 27 (the official cases), plus
+        case 28 (reverses into the space), case 29 (Park+UnPark round trip
+        lands at the front of the space), and case 30 (the street's end
+        acting as a wall) (tests/test_park.py).
         '''
 
     @abstractmethod
@@ -71,11 +76,13 @@ class ParkingAssistantInterface(ABC):
         Description: move forward (and left) to the front of the parking
         place. Only valid while status=="parked".
         Pre-condition: car must be parked.
-        Post-condition: position moves forward by 1 and status becomes
+        Post-condition: position moves forward by STRETCH_REQUIRED - 1 (park()
+        leaves the car at the back of the space, having reversed into it, so
+        this covers the rest of the space's length) and status becomes
         "unparked"; raises an error if unpark() is called while not parked
         (the requirement only says what happens "if it is parked" - it
         doesn't say what to do otherwise, so this is our own decision).
-        Test-cases: case 26, 27, 28 (tests/test_unpark.py)
+        Test-cases: case 31, 32, 33 (tests/test_unpark.py)
         '''
 
 

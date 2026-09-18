@@ -16,7 +16,7 @@ autonomous_parking_system/
 ├── __init__.py
 ├── interface.py          the six required methods, as a contract - no logic
 ├── state.py               what the car knows about itself: position, status, history
-├── sensor.py              fake sensors (fixed, random, noisy, scripted) standing in for real hardware
+├── sensor.py              fake sensors (fixed, random, noisy, scripted, counting) standing in for real hardware
 └── parking_assistant.py   the class that actually implements everything
 
 tests/
@@ -87,20 +87,38 @@ called out.
 ## Where we stand
 
 All six methods (WhereIs, MoveForward, MoveBackward, isEmpty, Park, UnPark)
-are implemented. 28 of 29 official test cases pass; 1 is skipped for now.
+are implemented. All 33 test cases pass - none skipped. The project
+instructions originally define 29 of those; the other 4 are our own
+additions (proving the reverse-parking distance, the two "wall" scenarios,
+and that `RandomSensor` behaves), folded into the same 1-33 numbering
+rather than kept as an unnumbered side list - see `tests/README.md` for
+exactly which case number is which.
 
-A couple of decisions we made aren't in the original brief - what happens
-if both sensors are noisy at once, and what happens if a sensor gives an
-out-of-range reading. We picked a reasonable behaviour ourselves and wrote
-it down in the tests, so it can go in the report as a documented
-assumption.
+**Decisions we made that aren't in the project instructions** (documented
+assumptions, not requirements we missed):
+- isEmpty: what happens if both sensors are noisy at once, and what
+  happens if a sensor gives an out-of-range reading.
+- Park: a free stretch is measured as consecutive whole metres where
+  isEmpty() reads 0, since the project instructions describe the 5m
+  requirement but not how a single-position sensor reading (max 2m range)
+  is meant to add up to that over multiple metres.
+- Park: once a qualifying stretch is found, the car reverses
+  `STRETCH_REQUIRED - 1` metres back into it before parking - modelling
+  the "standard parallel reverse parking maneuver" the project
+  instructions mention, but don't spell out in terms of exact distance.
+- UnPark: because of the above, UnPark now drives forward by
+  `STRETCH_REQUIRED - 1` (not a flat 1) to reach the front of the space -
+  the distance a straight `+1` covered before Park actually reversed into
+  the space.
+- The car only senses forward/backward along the street; there's no
+  lateral state, so an obstacle on the *opposite* side of the car from the
+  parking space isn't modelled at all.
 
 **On mocking:** no mocking library (`pytest-mock`/`unittest.mock`) is used
 anywhere in this test suite. Sensors are all small hand-written fakes:
-`FixedSensor`, `RandomSensor`, `NoisySensor`, and `SequenceSensor` (returns
-a scripted list of readings, used to prove Park's search-forward logic and
-5m boundary without needing a mocking framework). The one remaining
-skipped case - isEmpty's sensor call-count check - needs a sensor that can
-report how many times it was read, which is a better fit for
-`pytest-mock`, kept for Phase 2's sensor/actuator stubbing. See
+`FixedSensor`, `RandomSensor`, `NoisySensor`, `SequenceSensor` (returns a
+scripted list of readings, used to prove Park's search-forward logic and
+5m boundary), and `CountingSensor` (wraps another sensor and counts its
+`read()` calls, used to prove isEmpty's 5-queries-per-sensor requirement).
+Every official test case now passes without a mocking framework. See
 `tests/README.md` for the full breakdown.

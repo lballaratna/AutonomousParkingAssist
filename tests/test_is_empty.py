@@ -12,7 +12,7 @@ Handling specific cases:
 
 import pytest
 
-from autonomous_parking_system import FixedSensor, NoisySensor, ParkingAssistant, RandomSensor
+from autonomous_parking_system import CountingSensor, FixedSensor, NoisySensor, ParkingAssistant, RandomSensor
 
 
 # Return average when both sensors give valid readings
@@ -54,17 +54,24 @@ def test_out_of_range_reading_is_treated_as_invalid():
     assert car.is_empty() == 80
 
 
-# Check sensor query count
-def test_each_sensor_queried_at_least_five_times():
-    pytest.skip("Skipped: requires mock object to track read count")
+# Check sensor query count - each sensor must be read at least 5 times.
+# Wrapping FixedSensor in CountingSensor proves the call count without a
+# mocking library: no scripted sequence is needed here, just a counter.
+def test_each_sensor_queried_at_least_five_times():  # case 20
+    left = CountingSensor(FixedSensor(50))
+    right = CountingSensor(FixedSensor(52))
+    car = ParkingAssistant(left, right)
+    car.is_empty()
+    assert left.call_count >= 5
+    assert right.call_count >= 5
 
 
-# RandomSensor is the brief's other named input type (alongside "fixed").
+# RandomSensor is the project instructions' other named input type (alongside "fixed").
 # Nothing else in the suite calls it directly, so this just checks it
 # stays within the sensor's documented 0-200cm range across many reads -
 # a range check rather than an exact value, since the whole point of this
 # sensor is that its reading isn't predictable.
-def test_random_sensor_reading_is_within_range():
+def test_random_sensor_reading_is_within_range():  # case 21
     sensor = RandomSensor()
     for _ in range(50):
         reading = sensor.read()
