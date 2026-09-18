@@ -21,4 +21,20 @@ class NoisySensor(Sensor):
     '''wildy varying values, to stimulate a continously nosiy sensor'''
     def read(self) -> int:
         return random.choice([0,200,random.randint(0,200)])
-    
+
+class SequenceSensor(Sensor):
+    '''Returns a pre-set list of values, one block per metre, so a test can
+    script a sensor whose reading changes as the car drives forward -
+    without a mocking library. is_empty() reads a sensor 5 times per check
+    (to filter noise), so each value in `values` is repeated `repeat`
+    times in a row before moving on to the next one. Once the list runs
+    out, the last value repeats forever.'''
+    def __init__(self, values, repeat: int = 5):
+        self._values = list(values)
+        self._repeat = repeat
+        self._calls = 0
+
+    def read(self) -> int:
+        index = min(self._calls // self._repeat, len(self._values) - 1)
+        self._calls += 1
+        return self._values[index]

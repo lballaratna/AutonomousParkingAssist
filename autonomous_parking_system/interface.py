@@ -62,9 +62,7 @@ class ParkingAssistantInterface(ABC):
         found; raises an error if park() is called while already parked
         (not mentioned in the requirement - our own decision, same
         reasoning as unpark() below).
-        Test-cases: case 20, case 25 (tests/test_park.py) - built for Phase
-        1. Cases 21-24 (searching forward, the exact 5m boundary, no
-        stretch found anywhere) are skipped for now, covered in Phase 2.
+        Test-cases: case 20, 21, 22, 23, 24, 25 (tests/test_park.py).
         '''
 
     @abstractmethod

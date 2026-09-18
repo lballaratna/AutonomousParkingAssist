@@ -75,6 +75,7 @@ if a reading falls outside 0-200cm.
 - (f) Reading exactly 200cm (upper boundary) => Accepted as valid
 - (g) Reading outside 0-200cm => treated as invalid, same as a noisy reading (not in the requirements - our own decision)
 - Checking how many times each sensor is actually queried => Each sensor is read at least 5 times
+- RandomSensor readings stay within the documented 0-200cm range across many reads (not one of the official cases - added purely to exercise `RandomSensor`, which nothing else in the suite called directly)
 
 Cases (d) and (g) are genuine gaps in the brief, not requirements we
 missed - we made a call and wrote it down so it can go in the report as a
@@ -104,25 +105,30 @@ parked should not be allowed.
 
 - Car is already at a valid free stretch (>=5m) => Maneuver runs immediately; status becomes "parked"
 - Park called while already parked => Rejected
-
-Four cases from the official list are written down but skipped for now,
-all for the same reason:
-- No stretch right here, but one exists further ahead (search forward)
+- No stretch right here, but one exists further ahead => car drives forward (search) until it finds one, then parks at the far end of it
 - Free stretch is exactly 5.0m (boundary) => accepted
-- Free stretch is 4.9m (just short) => rejected, search continues
-- No qualifying stretch exists anywhere on the rest of the street
+- Free stretch is 4.9m (just short) => rejected, search continues past it
+- No qualifying stretch exists anywhere on the rest of the street => rejected once the street runs out
+
+`park()` treats every `is_empty() == 0` reading as one clear metre, and
+keeps a running count of *consecutive* clear metres starting from wherever
+the car already is (reusing `move_forward()` + `isEmpty()`, one metre at a
+time). A non-zero reading resets the count. Once the count reaches
+`STRETCH_REQUIRED` (5), the car is sitting at the far end of a qualifying
+stretch, so it parks right there. If `position` reaches `STREET_LENGTH`
+before that happens, there was never a long-enough gap, so `park()` raises
+instead of looping forever.
 
 Measuring "how long is the free stretch ahead" needs more than a single
 sensor reading - a single reading only goes up to 2m, but the requirement
-is 5m. Proving that in a test needs a sensor that can return a *sequence*
-of different readings, which `FixedSensor`/`RandomSensor` can't do. We
-tried adding a new fake sensor type for this once (`ScriptedSensor`), then
-decided against it - it wasn't one of the "random or fixed" inputs the
-brief actually names. The other option is a sensor scripted via
-`pytest-mock`, but we're keeping that mocking tool for Phase 2's
-sensor/actuator stubbing instead of bringing it into Phase 1 early.
-`park()` itself still only handles cases 20 and 25 for the same reason -
-the search-forward logic these four tests would prove doesn't exist yet.
+is 5m, so proving cases 21-24 needs a sensor that can return a *sequence*
+of different readings as the car moves. `FixedSensor`/`RandomSensor` can't
+do that. We'd earlier ruled out adding a sensor for this, planning to
+reach for `pytest-mock` in Phase 2 instead - on reflection that was overkill
+for what's actually needed here: a small hand-written test double
+(`SequenceSensor` in `sensor.py`), in the same spirit as `FixedSensor` and
+`NoisySensor`, that returns a scripted list of values instead of a fixed
+or random one. No mocking library needed.
 
 ---
 
@@ -148,16 +154,15 @@ together once this was noticed.
 
 ## Where we stand
 
-24 of the 28 official test cases are implemented and passing. 5 are
-skipped, all for the same underlying reason - they need a sensor that can
-be scripted (a specific sequence of readings, or a way to count how many
-times it was read), and we're deliberately keeping mocking tools
-(`pytest-mock`/`unittest.mock`) for Phase 2's sensor/actuator stubbing
-rather than bringing them into Phase 1 early:
+28 of the 29 official test cases are implemented and passing. 1 is
+skipped:
 
-- isEmpty case 19 (call-count check)
-- Park cases 21, 22, 23, 24 (search-forward and the 5m boundary)
+- isEmpty case 19 (call-count check) - needs a sensor that can report how
+  many times it was read, which is a `pytest-mock`/`unittest.mock`
+  concern rather than something a hand-written fake sensor can easily do.
+  Kept for Phase 2's sensor/actuator stubbing.
 
-No mocking library is imported anywhere in the Phase 1 test suite right
-now - every passing test uses only `FixedSensor`, `RandomSensor`, or
-`NoisySensor`, exactly what the brief names.
+Park cases 21-24 (search-forward and the 5m boundary) are no longer
+skipped - see the `SequenceSensor` note above. No mocking library is
+imported anywhere in the test suite right now; every passing test uses
+`FixedSensor`, `RandomSensor`, `NoisySensor`, or `SequenceSensor`.

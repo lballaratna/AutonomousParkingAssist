@@ -16,7 +16,7 @@ autonomous_parking_system/
 ├── __init__.py
 ├── interface.py          the six required methods, as a contract - no logic
 ├── state.py               what the car knows about itself: position, status, history
-├── sensor.py              fake sensors (fixed, random, noisy) standing in for real hardware
+├── sensor.py              fake sensors (fixed, random, noisy, scripted) standing in for real hardware
 └── parking_assistant.py   the class that actually implements everything
 
 tests/
@@ -87,7 +87,7 @@ called out.
 ## Where we stand
 
 All six methods (WhereIs, MoveForward, MoveBackward, isEmpty, Park, UnPark)
-are implemented. 24 of 28 official test cases pass; 5 are skipped for now.
+are implemented. 28 of 29 official test cases pass; 1 is skipped for now.
 
 A couple of decisions we made aren't in the original brief - what happens
 if both sensors are noisy at once, and what happens if a sensor gives an
@@ -95,12 +95,12 @@ out-of-range reading. We picked a reasonable behaviour ourselves and wrote
 it down in the tests, so it can go in the report as a documented
 assumption.
 
-**On mocking:** Phase 1 uses only the two sensor types the brief actually
-names (`FixedSensor`, `RandomSensor`, plus `NoisySensor` as a reasonable
-reading of "random"). No mocking library (`pytest-mock`/`unittest.mock`)
-is used anywhere in Phase 1 - that's being kept for Phase 2's
-sensor/actuator stubbing, per our own tool-mapping plan. A handful of
-cases genuinely need scripted/counted sensor control to test properly
-(Park's search-forward logic and 5m boundary, and isEmpty's call-count
-check) - those are skipped with a note explaining why, rather than tested
-with a workaround. See `tests/README.md` for exactly which cases and why.
+**On mocking:** no mocking library (`pytest-mock`/`unittest.mock`) is used
+anywhere in this test suite. Sensors are all small hand-written fakes:
+`FixedSensor`, `RandomSensor`, `NoisySensor`, and `SequenceSensor` (returns
+a scripted list of readings, used to prove Park's search-forward logic and
+5m boundary without needing a mocking framework). The one remaining
+skipped case - isEmpty's sensor call-count check - needs a sensor that can
+report how many times it was read, which is a better fit for
+`pytest-mock`, kept for Phase 2's sensor/actuator stubbing. See
+`tests/README.md` for the full breakdown.

@@ -2,6 +2,7 @@ from .interface import ParkingAssistantInterface
 from .sensor import Sensor
 from .state import CarState, ParkingRecord
 
+
 class ParkingAssistant(ParkingAssistantInterface):
 
     NOISE_THRESHOLD = 10  # cm - max acceptable spread across 5 readings
@@ -10,6 +11,7 @@ class ParkingAssistant(ParkingAssistantInterface):
         self.sensor_left = sensor_left
         self.sensor_right = sensor_right
         self.state = CarState()
+
 
    # --- Owner: Harikrishna M --
     def where_is(self) -> CarState:
@@ -49,7 +51,7 @@ class ParkingAssistant(ParkingAssistantInterface):
         self.state.records.append(ParkingRecord(self.state.position, reading))
         return self.state
 
-    # --- Owner: Pooney Joseph (reviewed by Harikrishna M) --
+    # --- Owner: Pooney Joseph (reviewed by Harikrishna M R) --
     def is_empty(self) -> int:
         # case f (test_each_sensor_queried_at_least_five_times, Phase 2):
         # the brief requires >=5 queries per sensor.
@@ -61,14 +63,19 @@ class ParkingAssistant(ParkingAssistantInterface):
         # case b (test_noisy_left_sensor_is_disregarded): left noisy, right
         # clean - disregard left entirely, trust right.
         if left_noisy and not right_noisy:
+
             return self._average(right)
         # case c (test_noisy_right_sensor_is_disregarded): mirror of case b.
-        if right_noisy and not left_noisy:
+        elif right_noisy and not left_noisy:
+     
             return self._average(left)
         # case a (test_both_sensors_clean_returns_filtered_reading): both
         # clean - average the two filtered readings.
-        if not left_noisy and not right_noisy:
+        elif not left_noisy and not right_noisy:
+
             return (self._average(left) + self._average(right)) // 2
+
+
 
         # case d (test_both_sensors_noisy): both sensors noisy at once - not
         # specified by the brief; refuse to guess rather than average two
@@ -94,27 +101,42 @@ class ParkingAssistant(ParkingAssistantInterface):
         return sum(readings) // len(readings)
 
     # --- Owner: Lavanya BallaRatna --
-    # NOTE: only cases 20 and 25 are built here for Phase 1. Cases 21
-    # (search forward for a stretch), 22/23 (the exact 5m boundary), and
-    # 24 (no stretch found anywhere) need a way to measure a multi-metre
-    # free stretch, which needs sensor test-doubles beyond what
-    # FixedSensor/RandomSensor/NoisySensor can give - deferred to Phase 2,
-    # where pytest-mock/unittest.mock is the planned tool for exactly this
-    # kind of sensor stubbing. See tests/test_park.py for the requirement
-    # notes kept against each deferred case.
+    # Each is_empty() == 0 reading stands for one clear metre. Cases
+    # 20-24 are really one algorithm: keep a running count of *consecutive*
+    # clear metres, starting from wherever the car already is; a non-zero
+    # reading breaks the run and the count starts over. Once the count
+    # reaches STRETCH_REQUIRED the car is sitting at the far end of a
+    # qualifying stretch (measurements combined/filtered via is_empty(),
+    # accumulated across positions), so it parks right there. If the
+    # street runs out first, there was never a long-enough gap (case 24).
     def park(self) -> CarState:
         # case 25 (test_park_while_already_parked_is_rejected): reject a
         # second park() call while already parked.
         if self.state.status == "parked":
             raise ValueError("already parked")
-        # case 20 (test_parks_immediately_when_already_at_free_stretch): if
-        # already at a qualifying free stretch, park immediately.
-        if self._at_free_stretch():
-            self.state.status = "parked"
-        return self.state
 
-    def _at_free_stretch(self) -> bool:
-        return self.is_empty() == 0
+        # case 20/21/22: reading at the current position, before moving -
+        # if it's already clear that's the first metre of the stretch.
+        consecutive_clear = 1 if self.is_empty() == 0 else 0
+
+        while consecutive_clear < self.STRETCH_REQUIRED:
+            # case 24 (test_no_stretch_found_anywhere_is_rejected): ran out
+            # of street before finding STRETCH_REQUIRED consecutive clear
+            # metres.
+            if self.state.position >= self.STREET_LENGTH:
+                raise ValueError(
+                    "no free stretch of {}m found on the street".format(
+                        self.STRETCH_REQUIRED))
+            self.move_forward()
+            # case 23 (test_four_point_nine_metre_stretch_is_rejected): a
+            # blocked reading resets the run; a clear one extends it.
+            latest_reading = self.state.records[-1].distance_cm
+            consecutive_clear = consecutive_clear + 1 if latest_reading == 0 else 0
+
+        # The car is now at the end of the qualifying STRETCH_REQUIRED-metre
+        # stretch, ready to reverse into it.
+        self.state.status = "parked"
+        return self.state
 
     def unpark(self) -> CarState:
         # case 27 (test_unpark_while_not_parked_is_rejected): reject
